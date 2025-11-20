@@ -213,7 +213,7 @@ MincutResult mincut(CGraph CG, std::string algorithm, std::string queue_type, bo
         }
     }
 
-    delete mc;
+    // delete mc;
 
     return MincutResult(light, heavy, cut);
 }
