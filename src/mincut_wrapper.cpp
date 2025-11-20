@@ -24,6 +24,7 @@
 
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
+#include <stdexcept>
 
 namespace py = pybind11;
 
@@ -31,9 +32,9 @@ namespace py = pybind11;
 typedef mutable_graph graph_type;
 typedef std::shared_ptr<graph_type> GraphPtr;
 
-/** 
+/**
  * Container for mincut output
- * 
+ *
  * @param light_partition the nodes on one side of the mincut
  * @param heavy_partition the nodes on the other side of the mincut
  * @param cut_size the number of edges in the cut
@@ -44,7 +45,7 @@ class MincutResult {
     int cut_size;
 
 public:
-    MincutResult(std::vector<int> light_, 
+    MincutResult(std::vector<int> light_,
                  std::vector<int> heavy_,
                  int cut_) : light_partition(light_), heavy_partition(heavy_), cut_size(cut_) {}
 
@@ -55,7 +56,7 @@ public:
 
 /**
  * Container for the mincut input
- * 
+ *
  * @param nodes list of nodes, must be range from 0 to n (e.g. [0, 1, 2, 3 ... n])
  * @param edges edges must contain values from node list
  */
@@ -64,7 +65,7 @@ class CGraph {
     std::vector<std::tuple<int, int> > edges;
 
 public:
-    CGraph(std::vector<int> nodes_, 
+    CGraph(std::vector<int> nodes_,
            std::vector<std::tuple<int, int> > edges_) : nodes(nodes_), edges(edges_) {}
     std::vector<int> get_nodes() { return nodes; }
     std::vector<std::tuple<int, int> > get_edges() { return edges; }
@@ -104,7 +105,7 @@ private:
      * @param node the starting node of the DFS
      * @param adjList the graph adjacency list
      * @param visited list of already visited nodes
-     * @param component set of node-ids belonging to the component 
+     * @param component set of node-ids belonging to the component
      *
      * DFS insertets nodes into the component set as it runs
      */
@@ -164,14 +165,16 @@ static std::shared_ptr<Graph> readGraphWeighted(CGraph g) {
     G->computeDegrees();
 
     return G;
-} 
+}
 
 /**
  * Slightly modified snippet from VieCut/app/mincut.cpp that computes mincut
- * 
+ *
  * Rather than taking a METIS filepath as input, we take a CGraph
  * Rather than storing output in a file, we store it in a MinCut object
  */
+
+// HT: TODO: this never terminates in CM-hanging issue
 MincutResult mincut(CGraph CG, std::string algorithm, std::string queue_type, bool balanced) {
     auto cfg = configuration::getConfig();
     // cfg->graph_filename = graph_filename;
@@ -194,6 +197,9 @@ MincutResult mincut(CGraph CG, std::string algorithm, std::string queue_type, bo
     EdgeID m = G->number_of_edges();
 
     auto mc = selectMincutAlgorithm<GraphPtr>(algorithm);
+    if (!mc) {
+        throw std::runtime_error("selectMincutAlgorithm returned null");
+    }
 
     t.restart();
     EdgeWeight cut;
@@ -207,7 +213,7 @@ MincutResult mincut(CGraph CG, std::string algorithm, std::string queue_type, bo
         }
     }
 
-    free(mc);
+    delete mc;
 
     return MincutResult(light, heavy, cut);
 }
