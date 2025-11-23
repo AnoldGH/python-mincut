@@ -37,15 +37,19 @@ class PyGraph:
     def mincut(self, algorithm, queue_implementation, balanced):
         ''' Python wrapper function for C++ mincut '''
         cg = self.as_CGraph()
+        print(f"CGraph reproduced")
+
         mc = mincut(cg, algorithm, queue_implementation, balanced)
 
         # Get the cut value
         cut = mc.get_cut_size()
+        print(f"Cut size: {cut}")
 
         # Edge case handler, balanced Viecut-Cactus fails on disconnected graphs
         if cut == 0 and balanced and algorithm == 'cactus':
             components = cg.connected_components()
             components = [list(map(lambda t: self.nodes[t], component)) for component in components]
+            print(f"Mincut bypassed")
             return components + [0]
 
         # If not in the edge case, return the mincut partitions as normal
